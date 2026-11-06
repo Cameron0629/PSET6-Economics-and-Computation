@@ -1,0 +1,126 @@
+\documentclass[10pt]{article}
+\usepackage[margin=0.72in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,array,tabularx}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\setlist{nosep,leftmargin=*}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Economics and Computation -- Problem Set 6}
+\rhead{Cameron and Justin}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\begin{document}
+
+\begin{center}
+{\LARGE\bfseries Sponsored Search Auctions}\\[3pt]
+{\large Cameron Wright and Justin}\\
+Economics and Computation -- Fall 2026
+\end{center}
+
+\section*{3. The Balanced-Bidding Agent}
+
+\subsection*{3.1 Team name}
+Our team name is \texttt{cwjc}.
+
+\subsection*{3.2 Strategy}
+For each slot, the agent omits its own previous bid and uses the minimum bid in that slot's GSP bid range as its predicted per-click price. It estimates utility as previous-round clicks times value minus predicted price, and targets the slot with greatest estimated utility. If the target is the top slot, or its predicted price is at least its value, it bids its value. For a lower target slot $s$, it solves the indifference condition with the next-higher slot:
+\[
+c_s(v-p_s)=c_{s-1}(v-b),\qquad
+b=v-\frac{c_s}{c_{s-1}}(v-p_s).
+\]
+The bid is rounded down to an integer cent and bounded between zero and value. The bid-range calculation incorporates the reserve and uses the previous round's clicks as the position-effect estimate.
+
+\subsection*{3.3(a) Truthful versus balanced populations}
+We used five agents, 48 rounds, the default budget of $\$5{,}000$, seed 2, 200 value draws, and one sampled value permutation per draw. Utilities are average daily dollars per agent.
+
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Population & Mean utility & Range across seats & Mean revenue \\
+\midrule
+Five Truthful & $\$337.41$ & $\$328.17$--$\$355.38$ & $\$6{,}139.20$ \\
+Five Cwjcbb & $\$641.59$ & $\$607.02$--$\$675.00$ & $\$4{,}616.72$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Balanced bidders earn substantially more utility in this experiment and generate less revenue. Truthful bids do not account for the fact that GSP charges the next bidder's bid: bidding value can lead an agent to pay more than necessary for a position. Balanced bidding uses observed competition to trade position against price. These are seeded estimates, not exact expectations.
+
+\subsection*{3.3(b) Mixed populations}
+For each mixed run we used five agents, seed 2, 200 draws, and 10 sampled value permutations per draw.
+
+\begin{center}
+\begin{tabular}{llr}
+\toprule
+Population & Agent type & Mean daily utility \\
+\midrule
+Four Truthful, one Cwjcbb & Truthful (mean of four) & $\$383.76$ \\
+Four Truthful, one Cwjcbb & Cwjcbb & $\$567.85$ \\
+Four Cwjcbb, one Truthful & Cwjcbb (mean of four) & $\$644.65$ \\
+Four Cwjcbb, one Truthful & Truthful & $\$649.22$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The balanced bidder has a sizable advantage when surrounded by truthful bidders. Against four balanced bidders, the truthful bidder's utility is close to, and in this sample slightly above, the balanced-agent mean. This is consistent with balanced bidding exploiting truthful overbidding while providing little systematic advantage over other balanced bidders. The small difference in the second mixed run is not evidence of a robust advantage.
+
+\section*{4. Revenue: GSP versus VCG}
+
+\subsection*{4.1 VCG payment rule}
+After filtering bids below reserve and sorting eligible bids, the implementation computes total payments from the lowest allocated slot upward. If $n$ slots are occupied and $b_n$ is the highest unallocated eligible bid (or the reserve when no such bid exists), the lowest bidder pays
+\[
+T_{n-1}=c_{n-1}\max\{r,b_n\}.
+\]
+For each higher slot $k$, the recursive externality payment is
+\[
+T_k=(c_k-c_{k+1})b_{k+1}+T_{k+1}.
+\]
+The code divides each total payment by that slot's clicks to return the per-click price expected by the simulator. The implementation passes the supplied VCG checks.
+
+\subsection*{4.2(b--c) Reserve-price revenue}
+The reserve grid was 0, 10, \ldots, 170 cents. Each run used five agents, seed 2, 200 draws, one sampled permutation per draw, and the default budget. Revenue is average daily dollars.
+
+\begin{center}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{r|rr@{\qquad}r|rr}
+\toprule
+Reserve & GSP + BB & VCG + truthful & Reserve & GSP + BB & VCG + truthful \\
+(cents) & (dollars) & (dollars) & (cents) & (dollars) & (dollars) \\
+\midrule
+0   & 4,616.72 & 4,345.24 & 90  & 5,201.39 & 5,109.71 \\
+10  & 4,616.72 & 4,345.24 & 100 & 4,921.53 & 4,857.88 \\
+20  & 4,616.72 & 4,345.24 & 110 & 4,920.91 & 4,880.81 \\
+30  & 4,617.32 & 4,358.02 & 120 & 4,570.69 & 4,561.00 \\
+40  & 4,751.97 & 4,545.75 & 130 & 4,254.49 & 4,243.38 \\
+50  & 4,687.79 & 4,465.68 & 140 & 3,567.80 & 3,563.65 \\
+60  & 4,948.72 & 4,746.63 & 150 & 2,809.52 & 2,808.90 \\
+70  & \textbf{5,205.38} & 5,012.76 & 160 & 1,669.61 & 1,669.99 \\
+80  & 5,175.56 & 5,044.00 & 170 & 703.83 & 703.88 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Among tested reserves, revenue is maximized at 70 cents for GSP with balanced bidders ($\$5{,}205.38$) and 90 cents for VCG with truthful bidders ($\$5{,}109.71$). Revenue initially increases as a reserve screens out low bids and raises the payment floor. At high reserves, fewer bids qualify, reducing allocated positions and revenue. Small movements around the maxima reflect sampling noise and changes in which bidders qualify.
+
+\subsection*{4.2(d) Switching from GSP to VCG at period 24}
+With balanced agents, reserve zero, seed 2, and 200 draws, revenue in periods 0--23 averaged $\$2{,}394.51$ per day-half under both the all-GSP and switch runs. In periods 24--47, the all-GSP comparison averaged $\$2{,}222.21$, while the run that switched to VCG averaged $\$1{,}819.06$. Revenue therefore fell by about 18\% compared with the same-seed all-GSP second half.
+
+This is economically plausible because these agents choose bids to balance GSP prices against positions. VCG charges winners for the externality they impose on other bidders, which differs from the next-bid GSP price and is often lower for higher positions when click-through rates fall down the page. The agents continue using their GSP-oriented adjustment after the mechanism changes, so their bids and payments are no longer adapted to the payment rule. This result is specific to these agents and this experiment, not a universal ranking of the mechanisms.
+
+\subsection*{4.2(e) Takeaways}
+The experiments show that bidder strategy and auction design jointly shape utility and revenue. In GSP, adapting bids to the observed price-position tradeoff can improve bidder utility relative to truthful bidding, while truthful bidders create an opening for a balanced bidder. Reserves can raise revenue by setting a floor but can also exclude too many bidders; the best tested reserve differs across payment rules and bidder populations. Changing from GSP to VCG without changing bidder behavior lowers revenue in this simulation, illustrating that mechanism performance depends on agent responses. Since each reserve estimate used one sampled permutation per value draw, the reported optima are best grid points in this seeded experiment, not precise universal optima.
+
+\section*{5. Budget-Constrained Competition Agent}
+\textbf{Design.} Cwjcbudget is self-contained in its submitted Python file. It starts at two-thirds of its value, then observes the previous period's other bids and slot clicks, selects the highest-surplus target slot, and computes the corresponding balanced bid. It compares cumulative spending with a linear daily spending plan. When spending is ahead of plan, it scales down a value-based bid cap; when spending is on or behind plan, it can use its full balanced bid up to value. It returns zero when its remaining budget is exhausted. This pacing rule aims to preserve budget for later periods while retaining balanced bidding's position-price logic. The simulator forces zero bids after budget exhaustion and permits the stated final-period overspend.
+
+\textbf{Expected behavior.} The agent should bid more cautiously when early payments put it ahead of pace, but it does not forecast future opponents or solve a dynamic optimization problem. It may leave budget unused or spend too quickly when competition changes. The assignment asks for a sensible, correctly running budget-aware agent rather than a tournament-winning strategy.
+
+\vspace{4pt}
+\textit{Implementation note: Amounts in the simulator are cents; this report converts totals to dollars. We used only the supplied starter code and Python standard library. The supplied GSP, simulator, balanced-bidding, and VCG checks passed.}
+
+\end{document}
